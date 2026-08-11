@@ -12,10 +12,11 @@ rules:
       confidence: HIGH
       references:
         - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+    # Only the SQL-building calls are sinks. .all()/.get() take *bound parameters* (a
+    # template literal there is the safe, parameterized value), so they are intentionally
+    # excluded — flagging them false-positives the correct fix `.all(`%${q}%`)`.
     patterns:
       - pattern-either:
           - pattern: $DB.prepare(`...${...}...`)
           - pattern: $DB.query(`...${...}...`)
           - pattern: $DB.exec(`...${...}...`)
-          - pattern: $DB.all(`...${...}...`)
-          - pattern: $DB.get(`...${...}...`)
