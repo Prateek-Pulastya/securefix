@@ -25,7 +25,7 @@ describe('Prototype pollution in POST /invoices/prefs', () => {
       .send('{"__proto__":{"polluted":"yes"}}');
 
     expect(res.status).toBe(200);
-    expect(({} as Record<string, unknown>).polluted).toBe('yes'); // on `main`: .toBeUndefined()
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined(); // safeMerge dropped __proto__
   });
 
   it('merges an ordinary key without polluting (green on both branches)', async () => {

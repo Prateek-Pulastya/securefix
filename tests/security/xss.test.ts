@@ -17,7 +17,8 @@ describe('Reflected XSS in POST /invoices/:id/note/preview', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/html/);
-    expect(res.text).toContain(payload); // on `main`: .not.toContain(payload), expect '&lt;script&gt;'
+    expect(res.text).not.toContain(payload); // encoded on output
+    expect(res.text).toContain('&lt;script&gt;'); // the tag renders as inert text
   });
 
   it('rejects a missing note (input guard, green on both branches)', async () => {

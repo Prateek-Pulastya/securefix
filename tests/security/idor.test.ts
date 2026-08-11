@@ -15,8 +15,8 @@ describe('IDOR in GET /invoices/:id', () => {
   it('lets alice read bob\'s invoice by id (vulnerable branch)', async () => {
     const res = await request(app).get('/invoices/3').set('x-user-id', '1'); // alice, bob's invoice
 
-    expect(res.status).toBe(200); // on `main`: .toBe(404)
-    expect(res.body.description).toBe('Pentest engagement'); // bob's data leaked cross-owner
+    expect(res.status).toBe(404); // owner-scoped: bob's invoice isn't visible to alice
+    expect(res.body.description).toBeUndefined(); // no cross-owner data
   });
 
   it('alice reading her own invoice still works (functional regression guard)', async () => {

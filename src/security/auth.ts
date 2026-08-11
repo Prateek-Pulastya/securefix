@@ -26,7 +26,12 @@ function bearer(req: Request): string {
 export function authenticate(req: Request): Principal | null {
   const token = bearer(req);
   if (!token) return null;
-  const payload = jwt.decode(token) as jwt.JwtPayload | null; // <-- no signature verification
-  if (!payload || typeof payload.sub !== 'number') return null;
-  return { sub: payload.sub };
+  try {
+    // verify the signature AND pin the algorithm (blocks `alg: none` + key confusion)
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as jwt.JwtPayload;
+    if (typeof payload.sub !== 'number') return null;
+    return { sub: payload.sub };
+  } catch {
+    return null;
+  }
 }

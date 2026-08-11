@@ -16,8 +16,8 @@ describe('JWT forgery in GET /invoices/mine', () => {
     const forged = jwt.sign({ sub: 2 }, 'attacker-secret-not-the-servers'); // bob, wrong key
     const res = await request(app).get('/invoices/mine').set('authorization', `Bearer ${forged}`);
 
-    expect(res.status).toBe(200); // on `main`: .toBe(401)
-    expect(JSON.stringify(res.body)).toContain('Pentest engagement'); // bob's invoice (owner_id 2)
+    expect(res.status).toBe(401); // forged signature fails verification
+    expect(JSON.stringify(res.body)).not.toContain('Pentest engagement'); // no data leaked
   });
 
   it('rejects a request with no token (green on both branches)', async () => {

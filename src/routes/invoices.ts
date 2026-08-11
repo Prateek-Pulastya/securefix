@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { db } from '../db';
 import { authenticate } from '../security/auth';
-import { deepMerge } from '../util/merge';
+import { assertPublicHost } from '../security/urlGuard';
+import { escapeHtml } from '../security/html';
+import { safeMerge } from '../util/merge';
 
 export const invoices = Router();
 
@@ -21,10 +23,10 @@ export const invoices = Router();
  *     .all(`%${q}%`);
  */
 invoices.get('/search', (req, res) => {
-  const q = req.query.q ?? '';
+  const q = String(req.query.q ?? '');
   const rows = db
-    .prepare(`SELECT id, description, amount FROM invoices WHERE description LIKE '%${q}%'`)
-    .all();
+    .prepare('SELECT id, description, amount FROM invoices WHERE description LIKE ?')
+    .all(`%${q}%`);
   res.json(rows);
 });
 
@@ -74,9 +76,11 @@ invoices.get('/mine', (req, res) => {
  */
 invoices.get('/:id', (req, res) => {
   const id = Number(req.params.id);
+  const ownerId = Number(req.header('x-user-id'));
+  if (!Number.isInteger(ownerId)) return res.status(401).json({ error: 'auth required' });
   const row = db
-    .prepare('SELECT id, description, amount, note FROM invoices WHERE id = ?')
-    .get(id);
+    .prepare('SELECT id, description, amount, note FROM invoices WHERE id = ? AND owner_id = ?')
+    .get(id, ownerId);
   if (!row) return res.status(404).json({ error: 'not found' });
   res.json(row);
 });
@@ -104,8 +108,14 @@ invoices.get('/:id', (req, res) => {
 invoices.post('/import', async (req, res) => {
   const url = req.body?.url;
   if (typeof url !== 'string') return res.status(400).json({ error: 'url (string) required' });
+  let safe: string;
   try {
-    const upstream = await fetch(url); // SSRF: url is attacker-controlled, unvalidated
+    safe = assertPublicHost(url);
+  } catch {
+    return res.status(400).json({ error: 'url host is not permitted' });
+  }
+  try {
+    const upstream = await fetch(safe); // sanitized: host checked against allowlist/deny
     const data = await upstream.json();
     res.json({ imported: data });
   } catch {
@@ -135,8 +145,8 @@ invoices.post('/import', async (req, res) => {
 invoices.post('/:id/note/preview', (req, res) => {
   const note = req.body?.note;
   if (typeof note !== 'string') return res.status(400).json({ error: 'note (string) required' });
-  // XSS: req.body.note interpolated into an HTML response with no output encoding.
-  res.send(`<!doctype html><div class="note-preview">${note}</div>`);
+  // Encoded on output: HTML metacharacters become entities, so the note renders as text.
+  res.send(`<!doctype html><div class="note-preview">${escapeHtml(note)}</div>`);
 });
 
 // Per-process display preferences store (a plausible "save my UI prefs" feature).
@@ -161,6 +171,6 @@ invoices.post('/prefs', (req, res) => {
   if (typeof req.body !== 'object' || req.body === null || Array.isArray(req.body)) {
     return res.status(400).json({ error: 'object body required' });
   }
-  deepMerge(prefs, req.body); // prototype pollution: unguarded recursive merge of user input
+  safeMerge(prefs, req.body); // guarded merge: dangerous keys rejected before assignment
   res.json({ prefs });
 });

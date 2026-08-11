@@ -31,8 +31,8 @@ describe('SSRF in POST /invoices/import', () => {
   it('reaches an internal-only host via a user url (vulnerable branch)', async () => {
     const res = await request(app).post('/invoices/import').send({ url: internalUrl });
 
-    expect(res.status).toBe(200); // on `main`: .toBe(400)
-    expect(JSON.stringify(res.body)).toContain('INTERNAL-METADATA'); // internal secret leaked
+    expect(res.status).toBe(400); // assertPublicHost rejects the private host before any fetch
+    expect(JSON.stringify(res.body)).not.toContain('INTERNAL-METADATA'); // nothing was fetched
   });
 
   it('rejects a missing url (input guard, green on both branches)', async () => {

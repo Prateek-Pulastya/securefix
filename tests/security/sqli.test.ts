@@ -15,7 +15,7 @@ describe('SQLi in GET /invoices/search', () => {
 
     const leakedHash = /\$2[aby]\$/.test(JSON.stringify(res.body)); // bcrypt hash pattern
     expect(res.status).toBe(200);
-    expect(leakedHash).toBe(true);
+    expect(leakedHash).toBe(false); // parameterized: the UNION payload is bound, not parsed
   });
 
   it('normal search still works (functional regression guard)', async () => {
