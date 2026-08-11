@@ -6,6 +6,8 @@ It's a small TypeScript/Express API with six planted vulnerabilities, one per co
 
 It is deliberately not a Juice Shop clone. The app is plain and a little boring on purpose. The interesting part is the loop and the detection rules, not the surface area.
 
+Each class carries two writeups, on purpose, to show both sides of the desk: the finder's bug-bounty report (`vulns/0X-*/report.md`, following the structure real programs ask for — see `vulns/REPORT_TEMPLATE.md`) and the defender's fix PR (`vulns/0X-*/README.md`).
+
 ## Results
 
 | Metric | Value |
