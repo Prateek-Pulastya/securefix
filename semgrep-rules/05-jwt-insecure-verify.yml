@@ -1,0 +1,29 @@
+rules:
+  - id: jwt-decode-used-for-auth
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      jwt.decode() does NOT verify the signature — it only base64-decodes the token.
+      An attacker can forge any claims. Use jwt.verify(token, secret, { algorithms: ['HS256'] }).
+    metadata:
+      cwe: "CWE-347: Improper Verification of Cryptographic Signature"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+    patterns:
+      - pattern: jwt.decode(...)
+
+  - id: jwt-verify-without-pinned-algorithm
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      jwt.verify() is called without pinning `algorithms`, or it allows 'none'.
+      Without a pinned algorithm an attacker may downgrade to 'none' or trigger
+      RS256/HS256 key confusion. Pass { algorithms: ['HS256'] } (or your real alg).
+    metadata:
+      cwe: "CWE-347: Improper Verification of Cryptographic Signature"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: jwt.verify($T, $S)
+          - pattern: 'jwt.verify($T, $S, { ..., algorithms: [..., "none", ...], ... })'

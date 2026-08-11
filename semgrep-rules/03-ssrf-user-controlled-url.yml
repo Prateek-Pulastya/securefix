@@ -1,0 +1,33 @@
+rules:
+  - id: ssrf-user-controlled-url
+    mode: taint
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      A user-controlled value flows into an outbound HTTP request without passing
+      through an allowlist/validation sanitizer. This is SSRF: an attacker can make
+      the server request internal hosts (169.254.169.254 cloud metadata, link-local,
+      RFC1918). Validate the host against an allowlist and block internal ranges.
+    metadata:
+      cwe: "CWE-918: Server-Side Request Forgery (SSRF)"
+      owasp: "A10:2021 - Server-Side Request Forgery"
+      confidence: HIGH
+    pattern-sources:
+      - pattern: req.body
+      - pattern: req.query
+      - pattern: req.params
+    pattern-sanitizers:
+      - pattern: isAllowedUrl(...)
+      - pattern: assertPublicHost(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: fetch($SINK, ...)
+              - pattern: fetch($SINK)
+              - pattern: axios.get($SINK, ...)
+              - pattern: axios($SINK, ...)
+              - pattern: got($SINK, ...)
+              - pattern: http.get($SINK, ...)
+              - pattern: https.get($SINK, ...)
+              - pattern: http.request($SINK, ...)
+              - pattern: https.request($SINK, ...)

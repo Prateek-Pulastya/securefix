@@ -1,0 +1,29 @@
+rules:
+  - id: xss-user-input-in-html-response
+    mode: taint
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      User-controlled input flows into an HTML response body without contextual
+      output encoding/sanitization. If the response is rendered as HTML, this is
+      (stored/reflected) XSS. Encode on output (escape HTML) or sanitize with a
+      vetted library (e.g. DOMPurify) before rendering.
+    metadata:
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+    pattern-sources:
+      - pattern: req.body
+      - pattern: req.query
+      - pattern: req.params
+    pattern-sanitizers:
+      - pattern: escapeHtml(...)
+      - pattern: sanitizeHtml(...)
+      - pattern: DOMPurify.sanitize(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: res.send($SINK)
+              - pattern: res.send(`...${$SINK}...`)
+              - pattern: res.write($SINK)
+              - pattern: res.end($SINK)

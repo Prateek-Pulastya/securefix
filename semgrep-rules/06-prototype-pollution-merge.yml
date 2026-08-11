@@ -1,0 +1,36 @@
+rules:
+  - id: prototype-pollution-dynamic-assign
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A recursive/dynamic key assignment (target[key] = source[key]) can be abused
+      when `key` is user-controlled and equals '__proto__' or 'constructor.prototype',
+      polluting Object.prototype. Guard keys explicitly (reject '__proto__',
+      'constructor', 'prototype') or use a Map / Object.create(null) / a vetted merge.
+    metadata:
+      cwe: "CWE-1321: Improperly Controlled Modification of Object Prototype Attributes ('Prototype Pollution')"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: LOW   # heuristic: see semgrep-rules/README.md
+    patterns:
+      - pattern: $T[$K] = $S[$K]
+      - pattern-not-inside: |
+          if (<... $K === "__proto__" ...>) { ... }
+      - pattern-not-inside: |
+          if (<... $K === "constructor" ...>) { ... }
+
+  - id: prototype-pollution-unsafe-merge-of-user-input
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A deep-merge/assign of request-derived JSON without a prototype guard. Reject
+      dangerous keys before merging, or use a merge implementation that ignores
+      '__proto__'/'constructor'.
+    metadata:
+      cwe: "CWE-1321: Prototype Pollution"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: LOW
+    patterns:
+      - pattern-either:
+          - pattern: _.merge($DEST, req.body)
+          - pattern: Object.assign($DEST, req.body)
+          - pattern: deepMerge($DEST, req.body)

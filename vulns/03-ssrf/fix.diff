@@ -1,0 +1,25 @@
+--- a/src/routes/invoices.ts
++++ b/src/routes/invoices.ts
+@@
+ import { Router } from 'express';
+ import { db } from '../db';
++import { assertPublicHost } from '../security/urlGuard';
+@@
+ invoices.post('/import', async (req, res) => {
+   const url = req.body?.url;
+   if (typeof url !== 'string') return res.status(400).json({ error: 'url (string) required' });
++  let safe: string;
++  try {
++    safe = assertPublicHost(url);
++  } catch {
++    return res.status(400).json({ error: 'url host is not permitted' });
++  }
+   try {
+-    const upstream = await fetch(url); // SSRF: url is attacker-controlled, unvalidated
++    const upstream = await fetch(safe); // sanitized: host checked against allowlist/deny
+     const data = await upstream.json();
+     res.json({ imported: data });
+   } catch {
+     res.status(502).json({ error: 'upstream fetch failed' });
+   }
+ });

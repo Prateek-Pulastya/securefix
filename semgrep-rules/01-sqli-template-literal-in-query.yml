@@ -1,0 +1,21 @@
+rules:
+  - id: sqli-template-literal-in-query
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      SQL is built from a template literal containing interpolation and passed to a
+      query/prepare/exec call. User input can alter the query shape. Use a
+      parameterized query with '?' placeholders and bound parameters instead.
+    metadata:
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+    patterns:
+      - pattern-either:
+          - pattern: $DB.prepare(`...${...}...`)
+          - pattern: $DB.query(`...${...}...`)
+          - pattern: $DB.exec(`...${...}...`)
+          - pattern: $DB.all(`...${...}...`)
+          - pattern: $DB.get(`...${...}...`)

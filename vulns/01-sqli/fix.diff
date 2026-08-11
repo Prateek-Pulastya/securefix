@@ -1,0 +1,14 @@
+--- a/src/routes/invoices.ts
++++ b/src/routes/invoices.ts
+@@
+ invoices.get('/search', (req, res) => {
+-  const q = req.query.q ?? '';
+-  const rows = db
+-    .prepare(`SELECT id, description, amount FROM invoices WHERE description LIKE '%${q}%'`)
+-    .all();
++  const q = String(req.query.q ?? '');
++  const rows = db
++    .prepare('SELECT id, description, amount FROM invoices WHERE description LIKE ?')
++    .all(`%${q}%`);
+   res.json(rows);
+ });

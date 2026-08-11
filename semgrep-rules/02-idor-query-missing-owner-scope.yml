@@ -1,0 +1,25 @@
+rules:
+  - id: idor-query-by-id-missing-owner-scope
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A row is fetched by id but the SQL does not scope the result to the current
+      owner/tenant (no 'owner_id'/'user_id' predicate). If the id comes from the
+      request path, any authenticated user can read another user's record (IDOR).
+      Add an ownership predicate: '... WHERE id = ? AND owner_id = ?'.
+    metadata:
+      cwe: "CWE-639: Authorization Bypass Through User-Controlled Key"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: LOW   # heuristic: regex-based; see semgrep-rules/README.md for known limits
+    patterns:
+      # A SELECT-by-id passed to <db>.prepare(...). $SQL keeps its source quotes, so the
+      # regex tolerates a leading quote (semgrep anchors metavariable-regex at the start).
+      - pattern: $DB.prepare($SQL)
+      - metavariable-regex:
+          metavariable: $DB
+          regex: ^(db|conn|database|sqlite)$
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: (?i).*select\s+.*from\s+.*where\s+.*\bid\s*=
+      # Silent once an ownership predicate is present anywhere in the prepare call text.
+      - pattern-not-regex: (?i)(owner_id|user_id|tenant_id)

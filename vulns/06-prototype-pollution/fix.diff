@@ -1,0 +1,41 @@
+--- a/src/util/merge.ts
++++ b/src/util/merge.ts
+@@
+-export function deepMerge(
++const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
++
++export function safeMerge(
+   target: Record<string, any>,
+   source: Record<string, any>,
+ ): Record<string, any> {
+   for (const key of Object.keys(source)) {
+-    if (
+-      source[key] &&
+-      typeof source[key] === 'object' &&
+-      target[key] &&
+-      typeof target[key] === 'object'
+-    ) {
+-      deepMerge(target[key], source[key]);
+-    } else {
+-      target[key] = source[key]; // <-- pollutes Object.prototype when key === '__proto__'
+-    }
++    if (FORBIDDEN.has(key)) continue; // drop __proto__/constructor/prototype
++    const value = source[key];
++    if (value && typeof value === 'object' && target[key] && typeof target[key] === 'object') {
++      safeMerge(target[key], value);
++    } else {
++      target[key] = value; // local RHS: no target[key] = source[key] gadget for the rule/attacker
++    }
+   }
+   return target;
+ }
+--- a/src/routes/invoices.ts
++++ b/src/routes/invoices.ts
+@@
+-import { deepMerge } from '../util/merge';
++import { safeMerge } from '../util/merge';
+@@
+-  deepMerge(prefs, body); // prototype pollution: unguarded recursive merge of user input
++  safeMerge(prefs, body); // guarded merge: dangerous keys rejected before assignment
+   res.json({ prefs });
+ });

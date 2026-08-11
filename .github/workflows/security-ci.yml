@@ -1,0 +1,46 @@
+name: security-ci
+on: [push, pull_request]
+
+jobs:
+  appsec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: SAST (custom rules + community packs)
+        run: |
+          python -m pip install --quiet semgrep
+          semgrep scan --error \
+            --config ./semgrep-rules \
+            --config p/typescript \
+            --config p/owasp-top-ten
+
+      - name: Dependency audit (SCA)
+        # Scope to runtime deps: dev-tooling advisories (esbuild/vite dev-server) never ship.
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Security regression tests
+        run: npm run test:security
+
+      # --- Stretch: CodeQL (uncomment when you add a query) ---
+      # - uses: github/codeql-action/init@v3
+      #   with:
+      #     languages: javascript-typescript
+      # - uses: github/codeql-action/analyze@v3
+
+# On the `main` (remediated) branch every step is GREEN.
+# On `seed/all-vulns` the SAST + regression-test steps go RED on purpose —
+# screenshot both. "Same pipeline, red before / green after" is the proof.

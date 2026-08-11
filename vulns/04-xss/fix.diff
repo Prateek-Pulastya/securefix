@@ -1,0 +1,15 @@
+--- a/src/routes/invoices.ts
++++ b/src/routes/invoices.ts
+@@
+ import { Router } from 'express';
+ import { db } from '../db';
++import { escapeHtml } from '../security/html';
+@@
+ invoices.post('/:id/note/preview', (req, res) => {
+   const note = req.body?.note;
+   if (typeof note !== 'string') return res.status(400).json({ error: 'note (string) required' });
+-  // XSS: req.body.note interpolated into an HTML response with no output encoding.
+-  res.send(`<!doctype html><div class="note-preview">${note}</div>`);
++  // Encoded on output: HTML metacharacters become entities, so the note renders as text.
++  res.send(`<!doctype html><div class="note-preview">${escapeHtml(note)}</div>`);
+ });

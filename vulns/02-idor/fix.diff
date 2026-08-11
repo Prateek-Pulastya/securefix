@@ -1,0 +1,15 @@
+--- a/src/routes/invoices.ts
++++ b/src/routes/invoices.ts
+@@
+ invoices.get('/:id', (req, res) => {
+   const id = Number(req.params.id);
++  const ownerId = Number(req.header('x-user-id'));
++  if (!Number.isInteger(ownerId)) return res.status(401).json({ error: 'auth required' });
+   const row = db
+-    .prepare('SELECT id, description, amount, note FROM invoices WHERE id = ?')
+-    .get(id);
++    .prepare('SELECT id, description, amount, note FROM invoices WHERE id = ? AND owner_id = ?')
++    .get(id, ownerId);
+   if (!row) return res.status(404).json({ error: 'not found' });
+   res.json(row);
+ });
