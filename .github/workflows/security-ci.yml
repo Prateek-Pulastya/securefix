@@ -7,6 +7,8 @@ jobs:
     steps:
       # Actions are pinned to commit SHAs (mutable tags can be repointed — supply-chain risk).
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0   # full history so the secret scan can diff commit ranges
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -19,7 +21,7 @@ jobs:
       # The blocking gate: my six hand-written rules. 0 findings on main, 7 on seed/all-vulns.
       - name: SAST — custom rules (blocking gate)
         run: |
-          python -m pip install --quiet semgrep
+          python -m pip install --quiet semgrep==1.172.0   # pinned: rules validated against this version
           semgrep scan --error --config ./semgrep-rules
 
       # Community packs run for extra coverage but don't fail the build — they're advisory and
