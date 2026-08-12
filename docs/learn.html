@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A teach-through walkthrough of SecureFix: six web vulnerabilities, each broken then fixed, explained for a complete beginner.">
+<title>SecureFix — how it works (a beginner's walkthrough)</title>
+<style>
+  html { color-scheme: light dark; }
+  body { margin: 0; background: var(--bg); }
+  .theme-toggle { position: fixed; top: 14px; right: 14px; z-index: 50;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    padding: 6px 10px; border-radius: 8px; }
+  .theme-toggle:hover { color: var(--text); border-color: var(--border2); }
+  .theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light or dark theme">&#9680; theme</button>
+<style>
+  :root {
+    --bg: #f3f4f7; --surface: #ffffff; --surface2: #eef0f4; --raise: #ffffff;
+    --text: #14171d; --muted: #5a6472; --faint: #8b919e;
+    --border: #dfe3ea; --border2: #cfd5df;
+    --accent: #a86a12; --accent-soft: #f3e6cf;
+    --red: #c23b36; --red-soft: #f6e0df; --green: #1c7d45; --green-soft: #d9efdf;
+    --code-bg: #0f1420; --code-text: #d7deea; --code-red:#ff8f8b; --code-green:#7fd79b; --code-amber:#e9bd77; --code-mute:#7f8ba0;
+    --shadow: 0 1px 2px rgba(20,23,29,.06), 0 8px 24px rgba(20,23,29,.06);
+    --mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  :root { --faint: #8b919e; }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1017; --surface: #151a23; --surface2: #1b212c; --raise: #1c222d;
+      --text: #e7ecf3; --muted: #98a3b3; --faint: #6b7688;
+      --border: #262d39; --border2: #333c4a;
+      --accent: #e0a458; --accent-soft: #2a2416;
+      --red: #f2635f; --red-soft: #2b1a1c; --green: #47c479; --green-soft: #14271c;
+      --code-bg: #0a0e16; --code-text: #d7deea;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1017; --surface: #151a23; --surface2: #1b212c; --raise: #1c222d;
+    --text: #e7ecf3; --muted: #98a3b3; --faint: #6b7688;
+    --border: #262d39; --border2: #333c4a;
+    --accent: #e0a458; --accent-soft: #2a2416;
+    --red: #f2635f; --red-soft: #2b1a1c; --green: #47c479; --green-soft: #14271c;
+    --code-bg: #0a0e16; --code-text: #d7deea;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.28);
+  }
+  :root[data-theme="light"] {
+    --bg: #f3f4f7; --surface: #ffffff; --surface2: #eef0f4; --raise: #ffffff;
+    --text: #14171d; --muted: #5a6472; --faint: #8b919e;
+    --border: #dfe3ea; --border2: #cfd5df;
+    --accent: #a86a12; --accent-soft: #f3e6cf;
+    --red: #c23b36; --red-soft: #f6e0df; --green: #1c7d45; --green-soft: #d9efdf;
+    --code-bg: #0f1420; --code-text: #d7deea;
+    --shadow: 0 1px 2px rgba(20,23,29,.06), 0 8px 24px rgba(20,23,29,.06);
+  }
+
+  * { box-sizing: border-box; }
+  .sf { background: var(--bg); color: var(--text); font-family: var(--sans);
+    line-height: 1.65; -webkit-font-smoothing: antialiased; font-size: 17px; }
+  .sf .wrap { max-width: 820px; margin: 0 auto; padding: 0 22px; }
+  .sf p { margin: 0 0 16px; }
+  .sf a { color: var(--accent); }
+  .sf .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin: 0 0 10px; }
+  .sf h1, .sf h2, .sf h3 { text-wrap: balance; line-height: 1.15; letter-spacing: -0.02em; }
+  .sf h2 { font-size: 30px; margin: 0 0 8px; font-weight: 800; }
+  .sf h3 { font-size: 20px; margin: 26px 0 8px; font-weight: 700; letter-spacing: -0.01em; }
+  .sf .lead { font-size: 19px; color: var(--muted); }
+  .sf .mono { font-family: var(--mono); }
+  .sf code { font-family: var(--mono); font-size: .86em; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; }
+
+  /* hero */
+  .sf .hero { padding: 74px 0 40px; border-bottom: 1px solid var(--border); }
+  .sf .hero .badge { display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px;
+    color: var(--muted); border:1px solid var(--border); background: var(--surface); padding:5px 11px; border-radius:999px; margin-bottom:22px; }
+  .sf .hero .badge .d { width:7px;height:7px;border-radius:50%;background:var(--accent); }
+  .sf .hero h1 { font-size: clamp(38px, 7vw, 60px); font-weight: 850; margin: 0 0 18px; }
+  .sf .hero h1 .attack { color: var(--red); } .sf .hero h1 .defend { color: var(--green); }
+  .sf .hero .sub { font-size: 20px; color: var(--muted); max-width: 640px; }
+  .sf .hero .meta { display:flex; flex-wrap:wrap; gap:8px; margin-top: 26px; }
+  .sf .chip { font-family: var(--mono); font-size: 12.5px; color: var(--text); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; }
+
+  /* section rhythm */
+  .sf section { padding: 52px 0; border-bottom: 1px solid var(--border); }
+  .sf .kicker { display:flex; align-items:baseline; gap:12px; margin-bottom: 18px; }
+  .sf .kicker .n { font-family: var(--mono); font-size: 13px; color: var(--faint); font-weight:600; }
+
+  /* callout / analogy */
+  .sf .note { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 10px; padding: 16px 18px; margin: 18px 0; box-shadow: var(--shadow); }
+  .sf .note .t { font-family: var(--mono); font-size: 11.5px; letter-spacing:.1em; text-transform:uppercase; color: var(--accent); font-weight:700; margin-bottom:6px; }
+  .sf .note p:last-child { margin-bottom: 0; }
+
+  /* loop diagram */
+  .sf .loop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 6px; }
+  .sf .loop .step { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 14px; box-shadow: var(--shadow); position: relative; }
+  .sf .loop .step .k { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+  .sf .loop .step .h { font-weight: 700; margin: 4px 0 4px; font-size: 15.5px; }
+  .sf .loop .step .d { font-size: 13.5px; color: var(--muted); line-height:1.5; }
+  .sf .loop .step.attack .k { color: var(--red); } .sf .loop .step.defend .k { color: var(--green); }
+
+  /* app model */
+  .sf .model { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
+  .sf .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); }
+  .sf .card h4 { margin: 0 0 10px; font-size: 14px; font-family: var(--mono); color: var(--muted); font-weight: 600; letter-spacing: .04em; }
+  .sf .row { display:flex; align-items:center; gap:10px; padding: 7px 0; border-bottom: 1px dashed var(--border); font-size: 14.5px; }
+  .sf .row:last-child { border-bottom: none; }
+  .sf .who { font-family: var(--mono); font-weight: 700; }
+  .sf .who.alice { color: var(--accent); } .sf .who.bob { color: #6ea8fe; }
+  :root[data-theme="light"] .sf .who.bob, :root:not([data-theme="dark"]) .sf .who.bob { color: #2f6fe0; }
+
+  /* tabs */
+  .sf .tabs { margin-top: 18px; }
+  .sf .tablist { display:flex; flex-wrap:wrap; gap:6px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+  .sf .tab { font-family: var(--mono); font-size: 13px; cursor: pointer; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); padding: 7px 12px; border-radius: 8px; display:flex; gap:8px; align-items:center; }
+  .sf .tab .num { color: var(--faint); }
+  .sf .tab:hover { border-color: var(--border2); color: var(--text); }
+  .sf .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #12140c; font-weight: 700; }
+  :root[data-theme="dark"] .sf .tab[aria-selected="true"], :root:not([data-theme="light"]) .sf .tab[aria-selected="true"] { color: #12140c; }
+  .sf .tab[aria-selected="true"] .num { color: #12140c; opacity:.65; }
+  .sf .panel { padding: 22px 0 4px; }
+  .sf .panel[hidden] { display: none; }
+  .sf .panel h3 { margin-top: 0; }
+  .sf .cwe { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 2px 0 14px; }
+  .sf .cwe b { color: var(--text); }
+
+  /* before/after */
+  .sf .ba { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .sf .ba .lab { font-family: var(--mono); font-size: 11px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; margin-bottom:7px; display:flex; align-items:center; gap:7px; }
+  .sf .ba .bad .lab { color: var(--red); } .sf .ba .good .lab { color: var(--green); }
+  .sf .dotb { width:8px;height:8px;border-radius:50%; } .sf .bad .dotb{background:var(--red);} .sf .good .dotb{background:var(--green);}
+
+  /* code */
+  .sf pre { background: var(--code-bg); color: var(--code-text); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 14px 15px; overflow-x: auto; margin: 12px 0; font-size: 13px; line-height: 1.6; }
+  .sf pre code { background: none; border: none; padding: 0; font-size: 13px; color: inherit; }
+  .sf .cm { color: var(--code-mute); } .sf .cr { color: var(--code-red); } .sf .cg { color: var(--code-green); } .sf .ca { color: var(--code-amber); }
+
+  /* step-through (attack flow) */
+  .sf .flow { display:flex; flex-direction: column; gap: 0; margin: 14px 0; }
+  .sf .flow .f { display:flex; gap: 12px; padding: 10px 0; }
+  .sf .flow .f .ic { flex:none; width: 26px; height: 26px; border-radius: 7px; display:grid; place-items:center;
+    font-family: var(--mono); font-size: 12px; font-weight: 700; background: var(--surface2); color: var(--muted); border:1px solid var(--border); }
+  .sf .flow .f.hit .ic { background: var(--red-soft); color: var(--red); border-color: var(--red); }
+  .sf .flow .f .txt { font-size: 14.5px; }
+  .sf .flow .f .txt b { font-family: var(--mono); font-weight: 700; }
+
+  /* rule catch */
+  .sf .catch { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 14px 0 0; }
+  .sf .catch .h { font-family: var(--mono); font-size: 11.5px; letter-spacing:.08em; text-transform: uppercase; color: var(--accent); font-weight:700; margin-bottom: 6px; }
+  .sf .catch .rn { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  .sf .catch p { font-size: 14.5px; margin: 6px 0 0; color: var(--muted); }
+
+  /* CI proof */
+  .sf .ci { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+  .sf .ci .b { border:1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); background: var(--surface); }
+  .sf .ci .b .head { padding: 12px 16px; display:flex; align-items:center; gap:9px; border-bottom:1px solid var(--border); font-family: var(--mono); font-weight:700; font-size: 14px; }
+  .sf .ci .b.red .head { background: var(--red-soft); } .sf .ci .b.green .head { background: var(--green-soft); }
+  .sf .ci .b .head .v { margin-left:auto; font-size: 11px; padding: 2px 8px; border-radius: 6px; }
+  .sf .ci .b.red .v { color: var(--red); border:1px solid var(--red); } .sf .ci .b.green .v { color: var(--green); border:1px solid var(--green); }
+  .sf .ci .b .s { display:flex; align-items:center; gap:10px; padding: 10px 16px; border-bottom:1px solid var(--border); font-family:var(--mono); font-size:13px; }
+  .sf .ci .b .s:last-child { border-bottom:none; } .sf .ci .b .s .m { margin-left:auto; color: var(--muted); }
+  .sf .ci .b .s .st { width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;color:#0d1017; }
+  .sf .ci .st.ok { background: var(--green); } .sf .ci .st.no { background: var(--red); }
+
+  .sf .foot { padding: 40px 0 64px; color: var(--muted); font-size: 14px; }
+  .sf .foot .run { font-family: var(--mono); font-size: 12.5px; background: var(--code-bg); color: var(--code-text);
+    border:1px solid var(--border2); border-radius: 10px; padding: 12px 14px; overflow-x:auto; }
+
+  @media (max-width: 680px) {
+    .sf .loop, .sf .model, .sf .ba, .sf .ci { grid-template-columns: 1fr; }
+    .sf .hero { padding: 48px 0 32px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .sf * { transition: none !important; animation: none !important; } }
+  .sf :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+</style>
+
+<div class="sf">
+  <!-- HERO -->
+  <div class="hero">
+    <div class="wrap">
+      <span class="badge"><span class="d"></span> SecureFix · a teach-through walkthrough</span>
+      <h1>Six ways to break a web app, and how to <span class="defend">fix</span> every one.</h1>
+      <p class="sub">A tiny invoice API with six real security bugs planted in it. For each bug you'll see how an <span class="mono" style="color:var(--red)">attacker</span> breaks in, how the <span class="mono" style="color:var(--green)">fix</span> shuts them out, and how a robot reviewer catches it before it ever ships again. No security background needed.</p>
+      <div class="meta">
+        <span class="chip">TypeScript + Express</span>
+        <span class="chip">6 vulnerability classes</span>
+        <span class="chip">exploit → fix → detect → prevent</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHAT IS THIS -->
+  <section><div class="wrap">
+    <div class="kicker"><span class="n mono">00</span><p class="eyebrow" style="margin:0">Start here</p></div>
+    <h2>What is this, in one breath</h2>
+    <p>Imagine a small web app that stores invoices. It works fine. But hidden inside it are six classic security bugs — the same kinds that show up in real companies every week. SecureFix is a guided tour of those six bugs.</p>
+    <p>The trick is that it shows <em>both sides of the desk</em>. First the <span style="color:var(--red)">attacker's</span> view: the exact trick that breaks the app. Then the <span style="color:var(--green)">engineer's</span> view: the fix, and an automatic guard that fails the build if anyone reintroduces the bug. Learning one side without the other is how bugs keep coming back. This does both.</p>
+    <div class="note">
+      <div class="t">First idea to hold onto</div>
+      <p>A web app is a <b>waiter</b>. You (the browser) send a request — "give me invoice 3", "search for 'domain'" — and the server goes to the kitchen (the database), does what you asked, and brings back the result. Every bug here is a way to make the waiter do something it shouldn't, by wording the request cleverly.</p>
+    </div>
+  </div></section>
+
+  <!-- THE LOOP -->
+  <section><div class="wrap">
+    <div class="kicker"><span class="n mono">01</span><p class="eyebrow" style="margin:0">The method</p></div>
+    <h2>The loop, repeated six times</h2>
+    <p>Every bug in this project goes through the same four steps. Once you see the loop once, the other five are variations on it.</p>
+    <div class="loop">
+      <div class="step attack"><div class="k">01 · attack</div><div class="h">Exploit</div><div class="d">Write a test that actually breaks in and proves the bug is real.</div></div>
+      <div class="step defend"><div class="k">02 · defend</div><div class="h">Fix</div><div class="d">Change the code so the same trick stops working.</div></div>
+      <div class="step defend"><div class="k">03 · detect</div><div class="h">Rule</div><div class="d">Teach a code-scanner the shape of this bug so it spots the next one.</div></div>
+      <div class="step defend"><div class="k">04 · prevent</div><div class="h">Gate</div><div class="d">Wire the scanner into CI so a bad change fails the build automatically.</div></div>
+    </div>
+    <p class="mono" style="font-size:13px;color:var(--muted);margin-top:16px">find it → fix it → teach a robot to catch it → block it forever</p>
+  </div></section>
+
+  <!-- THE APP -->
+  <section><div class="wrap">
+    <div class="kicker"><span class="n mono">02</span><p class="eyebrow" style="margin:0">The playground</p></div>
+    <h2>The app you'll be breaking</h2>
+    <p>It's deliberately boring: an invoice service with two users and three invoices. Boring is the point — it keeps your attention on the bug, not on a maze of features.</p>
+    <div class="model">
+      <div class="card">
+        <h4>Users</h4>
+        <div class="row"><span class="who alice">alice</span><span style="color:var(--muted);font-size:13px">id 1</span></div>
+        <div class="row"><span class="who bob">bob</span><span style="color:var(--muted);font-size:13px">id 2</span></div>
+      </div>
+      <div class="card">
+        <h4>Invoices</h4>
+        <div class="row">#1 · Cloud hosting <span style="margin-left:auto;color:var(--muted);font-size:13px">owner: <span class="who alice">alice</span></span></div>
+        <div class="row">#2 · Domain renewal <span style="margin-left:auto;color:var(--muted);font-size:13px">owner: <span class="who alice">alice</span></span></div>
+        <div class="row">#3 · Pentest engagement <span style="margin-left:auto;color:var(--muted);font-size:13px">owner: <span class="who bob">bob</span></span></div>
+      </div>
+    </div>
+    <p>Keep this cast in mind: whenever <span class="who alice mono">alice</span> manages to read invoice&nbsp;#3, she's read something that belongs to <span class="who bob mono">bob</span>. That's the whole shape of several bugs below.</p>
+  </div></section>
+
+  <!-- VULN EXPLORER -->
+  <section><div class="wrap">
+    <div class="kicker"><span class="n mono">03</span><p class="eyebrow" style="margin:0">The six bugs · click through</p></div>
+    <h2>Break it, then fix it</h2>
+    <p>Each tab is one bug. You'll get a plain-English analogy, the trick that breaks it, the fix side by side with the broken code, and the rule that catches it next time.</p>
+
+    <div class="tabs">
+      <div class="tablist" role="tablist" aria-label="The six vulnerabilities">
+        <button class="tab" role="tab" id="t1" aria-controls="p1" aria-selected="true"><span class="num">1</span> SQL injection</button>
+        <button class="tab" role="tab" id="t2" aria-controls="p2" aria-selected="false"><span class="num">2</span> IDOR</button>
+        <button class="tab" role="tab" id="t3" aria-controls="p3" aria-selected="false"><span class="num">3</span> SSRF</button>
+        <button class="tab" role="tab" id="t4" aria-controls="p4" aria-selected="false"><span class="num">4</span> XSS</button>
+        <button class="tab" role="tab" id="t5" aria-controls="p5" aria-selected="false"><span class="num">5</span> JWT</button>
+        <button class="tab" role="tab" id="t6" aria-controls="p6" aria-selected="false"><span class="num">6</span> Prototype pollution</button>
+      </div>
+
+      <!-- 1 SQLi -->
+      <div class="panel" id="p1" role="tabpanel" aria-labelledby="t1">
+        <h3>SQL injection — the search box that runs commands</h3>
+        <div class="cwe mono"><b>CWE-89</b> · OWASP A03 Injection · severity <b>High</b></div>
+        <div class="note"><div class="t">Analogy</div><p>You type a word into a search box. But the app pastes your word straight into an instruction it hands the database. So instead of a word, you type your own instruction — and the database obeys it. Like writing "one coffee, AND give me everything in the till" on the order slip, and the barista just does it.</p></div>
+        <h4 class="mono" style="color:var(--muted);font-size:13px;margin:18px 0 4px">THE ATTACK</h4>
+        <div class="flow">
+          <div class="f"><span class="ic">1</span><div class="txt">Search is built by gluing your text into the query: <code>...LIKE '%<b>YOUR TEXT</b>%'</code></div></div>
+          <div class="f hit"><span class="ic">2</span><div class="txt">So you send text that closes the quote and adds a command: <b>x%' UNION SELECT password, username, 0 FROM users --</b></div></div>
+          <div class="f hit"><span class="ic">3</span><div class="txt">The database returns every user's password hash, dressed up as "invoices".</div></div>
+        </div>
+        <div class="ba">
+          <div class="bad"><div class="lab"><span class="dotb"></span>Broken</div>
+<pre><code>db.prepare(
+  <span class="cr">`SELECT id, description, amount
+   FROM invoices
+   WHERE description LIKE '%${q}%'`</span>
+).all();  <span class="cm">// q is glued in raw</span></code></pre></div>
+          <div class="good"><div class="lab"><span class="dotb"></span>Fixed</div>
+<pre><code>db.prepare(
+  <span class="cg">'SELECT id, description, amount
+   FROM invoices
+   WHERE description LIKE ?'</span>
+).all(`%${q}%`); <span class="cm">// q is bound, not parsed</span></code></pre></div>
+        </div>
+        <p>The fix uses a <code>?</code> placeholder. The database treats <code>q</code> as a <em>value</em> to search for, never as part of the command. A quote or a <code>UNION</code> in your input is now just text.</p>
+        <div class="catch"><div class="h">How the robot catches it</div><div class="rn">sqli-template-literal-in-query</div><p>Flags any query string built with a <code>${...}</code> placeholder inside <code>.prepare()</code> — the exact "glued in raw" shape. The safe version has no <code>${...}</code> in the SQL, so it stays silent.</p></div>
+      </div>
+
+      <!-- 2 IDOR -->
+      <div class="panel" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+        <h3>IDOR — the coat check that hands over anyone's coat</h3>
+        <div class="cwe mono"><b>CWE-639</b> · OWASP A01 Broken Access Control · severity <b>Medium</b></div>
+        <div class="note"><div class="t">Analogy</div><p>A coat check with tickets numbered 1, 2, 3. You hand in ticket 3 and get that coat — even though your ticket was 1 — because the attendant never checks the coat is actually yours. On the web, the "ticket" is the number in the URL.</p></div>
+        <h4 class="mono" style="color:var(--muted);font-size:13px;margin:18px 0 4px">THE ATTACK</h4>
+        <div class="flow">
+          <div class="f"><span class="ic">1</span><div class="txt"><span class="who alice mono">alice</span> asks for her own invoice: <b>GET /invoices/1</b> — fine.</div></div>
+          <div class="f hit"><span class="ic">2</span><div class="txt">She changes one digit: <b>GET /invoices/3</b>. That invoice is <span class="who bob mono">bob's</span>.</div></div>
+          <div class="f hit"><span class="ic">3</span><div class="txt">The server returns it anyway. Counting upward dumps everyone's invoices.</div></div>
+        </div>
+        <div class="ba">
+          <div class="bad"><div class="lab"><span class="dotb"></span>Broken</div>
+<pre><code>db.prepare(
+  <span class="cr">'SELECT ... FROM invoices
+   WHERE id = ?'</span>
+).get(id); <span class="cm">// which user? nobody asked</span></code></pre></div>
+          <div class="good"><div class="lab"><span class="dotb"></span>Fixed</div>
+<pre><code>db.prepare(
+  <span class="cg">'SELECT ... FROM invoices
+   WHERE id = ? AND owner_id = ?'</span>
+).get(id, ownerId); <span class="cm">// must be yours</span></code></pre></div>
+        </div>
+        <p>The fix adds <code>AND owner_id = ?</code>: the row has to match both the id <em>and</em> the person asking. Ask for someone else's invoice and you get a 404, as if it doesn't exist.</p>
+        <div class="catch"><div class="h">How the robot catches it</div><div class="rn">idor-query-by-id-missing-owner-scope</div><p>Looks for a "fetch by id" query that has no owner/tenant check in it. The moment <code>owner_id</code> appears in the query, it goes quiet.</p></div>
+      </div>
+
+      <!-- 3 SSRF -->
+      <div class="panel" id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+        <h3>SSRF — making the server fetch things it shouldn't</h3>
+        <div class="cwe mono"><b>CWE-918</b> · OWASP A10 · severity <b>Critical</b></div>
+        <div class="note"><div class="t">Analogy</div><p>You can't walk into the locked server room. But you can ask the office intern — who has a key — to go in, grab a document, and bring it out to you. The server is that intern: it can reach internal systems you can't, and this feature asks it to fetch any address you name.</p></div>
+        <h4 class="mono" style="color:var(--muted);font-size:13px;margin:18px 0 4px">THE ATTACK</h4>
+        <div class="flow">
+          <div class="f"><span class="ic">1</span><div class="txt">The "import invoice from a URL" feature fetches whatever <b>url</b> you send.</div></div>
+          <div class="f hit"><span class="ic">2</span><div class="txt">You send an internal-only address: <b>http://169.254.169.254/…</b> — the cloud's secret metadata service.</div></div>
+          <div class="f hit"><span class="ic">3</span><div class="txt">The server fetches it and hands you back the instance's cloud credentials.</div></div>
+        </div>
+        <div class="ba">
+          <div class="bad"><div class="lab"><span class="dotb"></span>Broken</div>
+<pre><code>const url = req.body.url;
+<span class="cr">const r = await fetch(url);</span>
+<span class="cm">// fetch anything, anywhere</span></code></pre></div>
+          <div class="good"><div class="lab"><span class="dotb"></span>Fixed</div>
+<pre><code><span class="cg">const safe = assertPublicHost(url);</span>
+const r = await fetch(safe);
+<span class="cm">// blocks internal / metadata IPs</span></code></pre></div>
+        </div>
+        <p><code>assertPublicHost</code> rejects loopback, private ranges, and the metadata address before any request goes out. Ask for an internal host and you get a 400, not the intern's field trip.</p>
+        <div class="catch"><div class="h">How the robot catches it</div><div class="rn">ssrf-user-controlled-url · <span style="color:var(--muted)">taint tracking</span></div><p>This one follows the data. It watches a value that came from the request travel into <code>fetch()</code>. If it passed through the <code>assertPublicHost</code> check on the way, it's considered clean. If not, it fires.</p></div>
+      </div>
+
+      <!-- 4 XSS -->
+      <div class="panel" id="p4" role="tabpanel" aria-labelledby="t4" hidden>
+        <h3>XSS — a note the reader's browser runs as a command</h3>
+        <div class="cwe mono"><b>CWE-79</b> · OWASP A03 · severity <b>Medium</b></div>
+        <div class="note"><div class="t">Analogy</div><p>You leave a note for a librarian who reads everything aloud, word for word. Your note says: "…and now read out the safe combination." Their mouth just obeys. A browser is that mouth: if your text lands in a page as HTML, a <code>&lt;script&gt;</code> in it runs.</p></div>
+        <h4 class="mono" style="color:var(--muted);font-size:13px;margin:18px 0 4px">THE ATTACK</h4>
+        <div class="flow">
+          <div class="f"><span class="ic">1</span><div class="txt">The "preview your note" feature sends your note back inside an HTML page.</div></div>
+          <div class="f hit"><span class="ic">2</span><div class="txt">You make your note a script: <b>&lt;script&gt;steal(document.cookie)&lt;/script&gt;</b></div></div>
+          <div class="f hit"><span class="ic">3</span><div class="txt">Anyone who previews it runs your code in their logged-in session.</div></div>
+        </div>
+        <div class="ba">
+          <div class="bad"><div class="lab"><span class="dotb"></span>Broken</div>
+<pre><code>res.send(
+  <span class="cr">`&lt;div&gt;${note}&lt;/div&gt;`</span>
+); <span class="cm">// note becomes live HTML</span></code></pre></div>
+          <div class="good"><div class="lab"><span class="dotb"></span>Fixed</div>
+<pre><code>res.send(
+  <span class="cg">`&lt;div&gt;${escapeHtml(note)}&lt;/div&gt;`</span>
+); <span class="cm">// &lt; and &gt; become harmless text</span></code></pre></div>
+        </div>
+        <p><code>escapeHtml</code> turns <code>&lt;</code> into <code>&amp;lt;</code>, so the browser shows the script as text instead of running it. Encode on the way out and the note is just words again.</p>
+        <div class="catch"><div class="h">How the robot catches it</div><div class="rn">xss-user-input-in-html-response · <span style="color:var(--muted)">taint tracking</span></div><p>Follows request text into an HTML response. If it wasn't run through <code>escapeHtml</code> first, it fires. Encode it, and the tracker sees the value is safe.</p></div>
+      </div>
+
+      <!-- 5 JWT -->
+      <div class="panel" id="p5" role="tabpanel" aria-labelledby="t5" hidden>
+        <h3>JWT — a VIP wristband nobody checks</h3>
+        <div class="cwe mono"><b>CWE-347</b> · OWASP A07 · severity <b>Critical</b></div>
+        <div class="note"><div class="t">Analogy</div><p>A club uses VIP wristbands. Real ones are hard to forge because of a special seal. But this bouncer only glances at the color and never checks the seal. So you print your own wristband, write any name on it, and walk in as anyone — even the owner.</p></div>
+        <h4 class="mono" style="color:var(--muted);font-size:13px;margin:18px 0 4px">THE ATTACK</h4>
+        <div class="flow">
+          <div class="f"><span class="ic">1</span><div class="txt">A login token (JWT) says who you are and carries a signature that proves it's genuine.</div></div>
+          <div class="f hit"><span class="ic">2</span><div class="txt">The server uses <b>jwt.decode()</b> — which reads the token but never checks the signature.</div></div>
+          <div class="f hit"><span class="ic">3</span><div class="txt">You forge a token that says <b>{ sub: 2 }</b> (or admin) and sign it with your own key. Accepted.</div></div>
+        </div>
+        <div class="ba">
+          <div class="bad"><div class="lab"><span class="dotb"></span>Broken</div>
+<pre><code><span class="cr">jwt.decode(token)</span>
+<span class="cm">// reads claims, checks nothing</span></code></pre></div>
+          <div class="good"><div class="lab"><span class="dotb"></span>Fixed</div>
+<pre><code><span class="cg">jwt.verify(token, SECRET,
+  { algorithms: ['HS256'] })</span>
+<span class="cm">// checks the seal, pins the method</span></code></pre></div>
+        </div>
+        <p><code>jwt.verify</code> checks the signature against the secret, so a forged token is rejected. Pinning <code>algorithms</code> also blocks a sneakier trick where the attacker tells the server "this token uses no signature at all."</p>
+        <div class="catch"><div class="h">How the robot catches it</div><div class="rn">jwt-decode-used-for-auth &nbsp;+&nbsp; jwt-verify-without-pinned-algorithm</div><p>Two rules. One flags <code>jwt.decode</code> used as if it were login. The other flags <code>jwt.verify</code> that forgot to pin the algorithm. Only verify-with-a-pinned-algorithm passes both.</p></div>
+      </div>
+
+      <!-- 6 Proto -->
+      <div class="panel" id="p6" role="tabpanel" aria-labelledby="t6" hidden>
+        <h3>Prototype pollution — editing the factory template</h3>
+        <div class="cwe mono"><b>CWE-1321</b> · OWASP A08 · severity <b>High</b></div>
+        <div class="note"><div class="t">Analogy</div><p>In JavaScript, every object is stamped out from one shared template. Change the template and <em>every</em> object — including ones created later — is born with your change baked in. This feature merges your settings into an object without guarding that template, so you can write onto it.</p></div>
+        <h4 class="mono" style="color:var(--muted);font-size:13px;margin:18px 0 4px">THE ATTACK</h4>
+        <div class="flow">
+          <div class="f"><span class="ic">1</span><div class="txt">A "save preferences" feature deep-merges your JSON into a settings object.</div></div>
+          <div class="f hit"><span class="ic">2</span><div class="txt">You send a magic key that points at the template: <b>{ "__proto__": { "isAdmin": true } }</b></div></div>
+          <div class="f hit"><span class="ic">3</span><div class="txt">Now every object in the app is born with <code>isAdmin: true</code>. Later checks quietly trust it.</div></div>
+        </div>
+        <div class="ba">
+          <div class="bad"><div class="lab"><span class="dotb"></span>Broken</div>
+<pre><code><span class="cr">target[key] = source[key];</span>
+<span class="cm">// key can be "__proto__"</span></code></pre></div>
+          <div class="good"><div class="lab"><span class="dotb"></span>Fixed</div>
+<pre><code><span class="cg">if (FORBIDDEN.has(key)) continue;</span>
+target[key] = value;
+<span class="cm">// skip __proto__ / constructor</span></code></pre></div>
+        </div>
+        <p>The fix refuses the dangerous keys (<code>__proto__</code>, <code>constructor</code>, <code>prototype</code>) before assigning. Safer still: merge into objects that have no shared template at all.</p>
+        <div class="catch"><div class="h">How the robot catches it</div><div class="rn">prototype-pollution-dynamic-assign &nbsp;+&nbsp; unsafe-merge-of-user-input</div><p>One rule flags the raw <code>target[key] = source[key]</code> copy; the other flags merging <code>req.body</code> straight into an object. The guarded version dodges both shapes.</p></div>
+      </div>
+    </div>
+  </div></section>
+
+  <!-- HOW SEMGREP THINKS -->
+  <section><div class="wrap">
+    <div class="kicker"><span class="n mono">04</span><p class="eyebrow" style="margin:0">The robot reviewer</p></div>
+    <h2>How the code-scanner "thinks"</h2>
+    <p>The tool doing the catching is <b>Semgrep</b>. Think of it as a spell-checker, but for dangerous code shapes instead of typos. You write a rule once, and it reads every file looking for that shape. Two flavours show up in this project.</p>
+    <h3>Pattern rules — match a shape</h3>
+    <p>The simplest rules describe a shape of code, like "a query built with <code>${...}</code> glued inside it." Fast and blunt. Good for the obvious cases, but they can't tell whether the data is actually dangerous — only what the code looks like.</p>
+    <h3>Taint rules — follow the dye</h3>
+    <p>The smarter rules (SSRF, XSS) trace a drop of dye. They mark anything from the request as "tainted", then watch to see if it reaches a dangerous place — a <code>fetch()</code>, an HTML response — <em>without</em> passing through a cleaning step first. If it does, that's the bug. This is why the fix works by routing the value through a named cleaner: the tracker sees it get washed and stops worrying.</p>
+    <div class="note"><div class="t">The honest part</div><p>Writing the rules was where the real work hid. Three of these rules were shipped but had never actually been run — and two of them caught <em>nothing</em> until they were tested against a live bug. A scanner you never verify is a false sense of safety. Every rule here was checked to fire on the bug and stay silent on the fix.</p></div>
+  </div></section>
+
+  <!-- THE GATE -->
+  <section><div class="wrap">
+    <div class="kicker"><span class="n mono">05</span><p class="eyebrow" style="margin:0">The safety net</p></div>
+    <h2>The gate: red before, green after</h2>
+    <p>The project keeps two copies of the code. One has all six bugs; one has all six fixes. The exact same automated pipeline runs on both — and that's the proof the loop works.</p>
+    <div class="ci">
+      <div class="b red">
+        <div class="head"><span style="color:var(--red)">●</span> seed · all bugs <span class="v mono">FAILS</span></div>
+        <div class="s"><span class="st ok">✓</span> typecheck <span class="m">clean</span></div>
+        <div class="s"><span class="st ok">✓</span> tests <span class="m">exploits fire</span></div>
+        <div class="s"><span class="st no">✕</span> scanner <span class="m">7 findings</span></div>
+      </div>
+      <div class="b green">
+        <div class="head"><span style="color:var(--green)">●</span> main · all fixed <span class="v mono">PASSES</span></div>
+        <div class="s"><span class="st ok">✓</span> typecheck <span class="m">clean</span></div>
+        <div class="s"><span class="st ok">✓</span> tests <span class="m">exploits blocked</span></div>
+        <div class="s"><span class="st ok">✓</span> scanner <span class="m">0 findings</span></div>
+      </div>
+    </div>
+    <p style="margin-top:16px">On the buggy copy the scanner finds seven problems and <b>fails the build</b> (red). On the fixed copy it finds nothing and the build <b>passes</b> (green). Wire that scanner into CI and nobody can merge one of these bugs back in without the build going red first. That's the "prevent" step — the bug is caught by a machine, not by hoping a human notices.</p>
+    <p class="mono" style="font-size:12.5px;color:var(--muted)">Why seven findings for six bugs? Prototype pollution trips two separate rules.</p>
+  </div></section>
+
+  <!-- CLOSE -->
+  <div class="foot"><div class="wrap">
+    <h2 style="color:var(--text)">That's the whole thing</h2>
+    <p>Six bugs, each taken all the way around the loop: a break-in you can run, a fix that stops it, a rule that catches the next one, and a gate that blocks it forever. If you followed the SQL injection tab from top to bottom, you've already seen the pattern the other five repeat.</p>
+    <p style="color:var(--muted);font-size:14.5px">To poke at it yourself, the two copies live on git branches <code>seed/all-vulns</code> and <code>main</code>:</p>
+    <div class="run">git checkout seed/all-vulns && npm run test:security && npm run sast:docker:rules</div>
+  </div></div>
+</div>
+
+<script>
+(function () {
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.sf .tab'));
+  var panels = Array.prototype.slice.call(document.querySelectorAll('.sf .panel'));
+  function select(i) {
+    tabs.forEach(function (t, j) {
+      var on = j === i;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      panels[j].hidden = !on;
+    });
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { select(i); });
+    t.addEventListener('keydown', function (e) {
+      var n = null;
+      if (e.key === 'ArrowRight') n = (i + 1) % tabs.length;
+      else if (e.key === 'ArrowLeft') n = (i - 1 + tabs.length) % tabs.length;
+      else if (e.key === 'Home') n = 0;
+      else if (e.key === 'End') n = tabs.length - 1;
+      if (n !== null) { e.preventDefault(); select(n); tabs[n].focus(); }
+    });
+  });
+  select(0);
+})();
+</script>
+
+<script>
+(function () {
+  var btn = document.getElementById('themeToggle');
+  var root = document.documentElement;
+  btn.addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme');
+    if (!cur) { cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  });
+})();
+</script>
+</body>
+</html>
