@@ -17,7 +17,9 @@ I spend most of my time trying to break into systems. This project points the ot
 
 It is deliberately not a Juice Shop clone. The app is plain on purpose; the value is the loop and the hand-written detection rules, not the surface area.
 
-**Jump to:** [See it work](#see-it-work) · [The six bugs](#the-six-vulnerabilities) · [How it works](#how-it-works) · [What this demonstrates](#what-this-demonstrates) · [Quickstart](#quickstart) · [Beginner walkthrough](docs/learn.html)
+**▶ Live beginner walkthrough — [prateek-pulastya.github.io/securefix](https://prateek-pulastya.github.io/securefix/)**
+
+**Jump to:** [See it work](#see-it-work) · [The six bugs](#the-six-vulnerabilities) · [How it works](#how-it-works) · [What this demonstrates](#what-this-demonstrates) · [Quickstart](#quickstart)
 
 ---
 
@@ -143,4 +145,4 @@ TypeScript (strict) · Express · Node `node:sqlite` · Semgrep · GitHub Action
 
 MIT — see [LICENSE](LICENSE).
 
-Built by [Prateek Pulastya](https://github.com/Prateek-Pulastya) as a portfolio piece. New here? Start with the [beginner walkthrough](docs/learn.html).
+Built by [Prateek Pulastya](https://github.com/Prateek-Pulastya) as a portfolio piece. New here? Start with the [live walkthrough](https://prateek-pulastya.github.io/securefix/).
